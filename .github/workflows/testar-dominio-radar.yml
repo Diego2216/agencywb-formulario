@@ -1,0 +1,29 @@
+name: Verificar API do dominio Wodburn
+on:
+  push:
+    paths: [".github/workflows/testar-dominio-radar.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-cors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar acesso da API via domínio personalizado
+        run: |
+          set -euo pipefail
+          api=https://ylmtitgkkmkwufbnzlgt.supabase.co/functions/v1/wodburn-radar
+          for origin in https://diego2216.github.io https://radar.wodburn.com.br; do
+            headers=$(mktemp)
+            status=$(curl --retry 3 --retry-delay 2 -sS -o /dev/null -D "$headers" -w '%{http_code}' -X OPTIONS \
+              -H "Origin: $origin" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type" "$api")
+            test "$status" = "204"
+            grep -Fqi "access-control-allow-origin: $origin" "$headers"
+            echo "$origin: API liberada (204)"
+          done
+      - name: Conferir CNAME no repositório
+        run: |
+          status=$(curl -L -sS -o /tmp/domain-cname -w "%{http_code}" https://raw.githubusercontent.com/Diego2216/agencywb-formulario/main/CNAME)
+          test "$status" = "200"
+          grep -Fxq radar.wodburn.com.br /tmp/domain-cname
+          echo "CNAME cadastrado no GitHub"
