@@ -55,3 +55,11 @@ jobs:
             echo "A visto em $ns:"
             dig @"$ns" +time=4 +tries=1 +noall +answer radar.wodburn.com.br A || true
           done
+
+      - name: Confirmar bloqueio do painel privado sem login
+        run: |
+          set -euo pipefail
+          status=$(curl -sS -o /tmp/pilot-restricted.json -w '%{http_code}' \
+            'https://ylmtitgkkmkwufbnzlgt.supabase.co/functions/v1/wodburn-radar?action=pilot-cases')
+          test "$status" = "401"
+          echo "API interna de casos exige autenticação: 401"
