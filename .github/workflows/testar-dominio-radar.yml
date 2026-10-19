@@ -27,3 +27,18 @@ jobs:
           test "$status" = "200"
           grep -Fxq radar.wodburn.com.br /tmp/domain-cname
           echo "CNAME cadastrado no GitHub"
+
+      - name: Diagnosticar DNS e emissao do certificado HTTPS
+        run: |
+          echo "DNS CNAME pelo Cloudflare:"
+          dig +time=3 +tries=1 @1.1.1.1 +short radar.wodburn.com.br CNAME || true
+          echo "DNS CNAME pelo Google:"
+          dig +time=3 +tries=1 @8.8.8.8 +short radar.wodburn.com.br CNAME || true
+          echo "DNS A pelo Cloudflare:"
+          dig +time=3 +tries=1 @1.1.1.1 +short radar.wodburn.com.br A || true
+          echo "CAA do dominio principal:"
+          dig +time=3 +tries=1 @1.1.1.1 +short wodburn.com.br CAA || true
+          echo "HTTP no subdominio:"
+          curl --max-time 12 -sSIL -o /dev/null -w 'HTTP code: %{http_code}; redirect: %{redirect_url}; IP: %{remote_ip}\n' http://radar.wodburn.com.br/ || true
+          echo "HTTPS no subdominio:"
+          curl --max-time 12 -sSIL -o /dev/null -w 'HTTPS code: %{http_code}; IP: %{remote_ip}; SSL verify: %{ssl_verify_result}\n' https://radar.wodburn.com.br/ || true
