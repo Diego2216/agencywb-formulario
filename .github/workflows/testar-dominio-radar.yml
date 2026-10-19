@@ -42,3 +42,16 @@ jobs:
           curl --max-time 12 -sSIL -o /dev/null -w 'HTTP code: %{http_code}; redirect: %{redirect_url}; IP: %{remote_ip}\n' http://radar.wodburn.com.br/ || true
           echo "HTTPS no subdominio:"
           curl --max-time 12 -sSIL -o /dev/null -w 'HTTPS code: %{http_code}; IP: %{remote_ip}; SSL verify: %{ssl_verify_result}\n' https://radar.wodburn.com.br/ || true
+
+      - name: Conferir nameservers autoritativos da Locaweb
+        run: |
+          echo "NS do dominio vistos por resolver publico:"
+          dig @1.1.1.1 +time=4 +tries=1 +short wodburn.com.br NS || true
+          echo "SOA do dominio:"
+          dig @1.1.1.1 +time=4 +tries=1 +short wodburn.com.br SOA || true
+          for ns in ns1.locaweb.com.br ns2.locaweb.com.br ns3.locaweb.com.br; do
+            echo "CNAME visto em $ns:"
+            dig @"$ns" +time=4 +tries=1 +noall +answer radar.wodburn.com.br CNAME || true
+            echo "A visto em $ns:"
+            dig @"$ns" +time=4 +tries=1 +noall +answer radar.wodburn.com.br A || true
+          done
