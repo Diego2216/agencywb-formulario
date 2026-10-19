@@ -1,0 +1,40 @@
+name: Verificar formulario publico
+on:
+  push:
+    paths:
+      - ".github/workflows/verificar-formulario.yml"
+      - "index.html"
+      - "privacidade.html"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar pagina no GitHub Pages
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors \
+            https://diego2216.github.io/agencywb-formulario/ -o /tmp/formulario.html
+          grep -Fq 'id="f"' /tmp/formulario.html
+          grep -Fq 'href="#formulario"' /tmp/formulario.html
+          grep -Fq 'data-step="3"' /tmp/formulario.html
+          echo "Pagina principal e quatro etapas: OK"
+      - name: Verificar pagina de privacidade
+        run: |
+          curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors \
+            https://diego2216.github.io/agencywb-formulario/privacidade.html -o /tmp/privacidade.html
+          grep -Fq 'Aviso de privacidade' /tmp/privacidade.html
+          echo "Aviso de privacidade: OK"
+      - name: Verificar preflight CORS da API
+        run: |
+          set -euo pipefail
+          status=$(curl -sS -o /tmp/preflight.out -w "%{http_code}" \
+             -X OPTIONS \
+             -H "Origin: https://diego2216.github.io" \
+             -H "Access-Control-Request-Method: POST" \
+             -H "Access-Control-Request-Headers: content-type" \
+             https://ylmtitgkkmkwufbnzlgt.supabase.co/functions/v1/wodburn-radar)
+          test "$status" = "204"
+          echo "Preflight CORS: OK (204)"
