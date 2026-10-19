@@ -1,0 +1,78 @@
+name: Teste ponta a ponta Wodburn Radar
+on:
+  push:
+    paths: [".github/workflows/testar-cadastro.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  testar-registro:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar negocio ficticio para validar o cadastro
+        run: |
+          set -euo pipefail
+          cat > /tmp/wodburn-test.json <<'JSON'
+          {
+            "contact_name":"TESTE AUTOMATIZADO WODBURN",
+            "company":"TESTE-WODBURN-RADAR-TEMPORARIO",
+            "email":"teste-radar@example.invalid",
+            "phone":"",
+            "city":"Cidade Teste",
+            "state":"SP",
+            "segment":"Outros",
+            "stage":"Ideia / começando",
+            "years_active":"Menos de 1 ano",
+            "team_size":1,
+            "offering":"Somente dados ficticios de teste automatizado do fluxo",
+            "channels":["Indicação"],
+            "capabilities":{
+              "google":"ausente","whatsapp":"parcial","social":"funciona","site":"ausente",
+              "crm":"ausente","metrics":"parcial","retention":"parcial","operations":"parcial"
+            },
+            "monthly_clients":7,
+            "ticket_average":150,
+            "monthly_revenue":1200,
+            "monthly_costs":1000,
+            "works":"Atendimento inicial em teste",
+            "fails":"Teste de acompanhamento comercial",
+            "bottleneck":"Teste de registro de oportunidades",
+            "goal":"Testar cadastro de clientes e metricas sem dados reais",
+            "services_of_interest":"",
+            "privacy_ok":true,
+            "contact_permission":false,
+            "marketing_opt_in":false,
+            "website":"",
+            "details":{
+              "ads_mode":"impulsionar",
+              "ads_platforms":["Instagram Ads"],
+              "ads_spend":140,
+              "ads_tracking":"nao",
+              "monthly_leads":20,
+              "monthly_sales":5,
+              "response_time":"diaseguinte",
+              "follow_up":"nunca",
+              "repeat_customers":"asvezes",
+              "sales_system":"whatsapp",
+              "sales_challenge":"Pouca organizacao",
+              "margin_known":"nao",
+              "pricing_basis":"intuicao",
+              "capacity":"nao",
+              "operations_issue":"processos",
+              "ideal_customer":"Publico ficticio para teste",
+              "main_competitor":"Concorrencia ficticia",
+              "interest":"diagnostico",
+              "niche":{"question_a":"Onde perde oportunidades?","answer_a":"Atendimento",
+                       "question_b":"Prioridade hoje?","answer_b":"Organização"}
+            }
+          }
+          JSON
+          status=$(curl -sS -o /tmp/radar-test-response.json -w "%{http_code}" \
+            -X POST -H "Origin: https://diego2216.github.io" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/wodburn-test.json \
+            https://ylmtitgkkmkwufbnzlgt.supabase.co/functions/v1/wodburn-radar)
+          cat /tmp/radar-test-response.json
+          echo "HTTP: $status"
+          test "$status" = "201"
+          grep -Fq '"ok":true' /tmp/radar-test-response.json
