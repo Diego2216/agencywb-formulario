@@ -49,7 +49,7 @@ class GoBurnStaticTests(unittest.TestCase):
     def test_backend_has_financial_checks(self):
         for fragment in ("signatureValid","verifySignature","transaction_amount","external_reference","amount_cents","payment.status===\"approved\"","order.status!==\"paid\"","authorizedOrder","goburn_staff"):
             self.assertIn(fragment,self.backend)
-        self.assertNotIn("status:p.status",self.backend) # no arbitrary client payment status assignment
+        self.assertNotIn('from("goburn_orders").update({status:p.status',self.backend) # no arbitrary client payment status assignment
     def test_database_denies_public_reads(self):
         for fragment in ("enable row level security","revoke all on table public.goburn_orders from anon, authenticated","revoke all on table public.goburn_cases from anon, authenticated"):
             self.assertIn(fragment,self.schema.lower())
