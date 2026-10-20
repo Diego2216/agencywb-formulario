@@ -1,0 +1,26 @@
+name: GO BURN — Verificações estáticas
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'goburn/**'
+      - '.github/workflows/goburn-checks.yml'
+  pull_request:
+    paths:
+      - 'goburn/**'
+      - '.github/workflows/goburn-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar sintaxe do aplicativo
+        run: node --check goburn/app.js && node --check goburn/config.js
+      - name: Validar estrutura e regras de segurança
+        run: python3 -m unittest discover -s goburn/tests -v
