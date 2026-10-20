@@ -148,6 +148,43 @@ async function webhook(req:Request,url:URL,origin:string){
   }
   return respond({ok:true},200,origin);
 }
+
+async function staff(req:Request){
+ const bearer=req.headers.get("authorization")||"";
+ if(!bearer.startsWith("Bearer "))return null;
+ const {data:identity,error:authError}=await db.auth.getUser(bearer.slice(7));
+ if(authError||!identity.user)return null;
+ const {data:member}=await db.from("goburn_staff").select("role").eq("user_id",identity.user.id).maybeSingle();
+ return member?{id:identity.user.id,role:member.role}:null;
+}
+const CASE_STATUSES=["aguardando_analise","em_analise","entregue","proposta_enviada","contratado","arquivado"];
+async function adminDashboard(req:Request,origin:string){
+ const actor=await staff(req);if(!actor)return failure("Acesso restrito à equipe GO BURN.",403,origin);
+ const [orders,cases]=await Promise.all([
+ db.from("goburn_orders").select("status,amount_cents,created_at"),
+ db.from("goburn_cases").select("id,protocol,status,priority,lead_score,opportunity_type,answers,internal_notes,submitted_at,goburn_orders(customer_name,customer_email,customer_company,plan,amount_cents)").order("submitted_at",{ascending:false}).limit(150)
+ ]);
+ if(orders.error||cases.error)return failure("Falha ao carregar a central.",503,origin);
+ const rows=orders.data||[];
+ const summary={pedidos:rows.length,pagos:rows.filter(x=>x.status==="paid"||x.status==="submitted").length,
+ enviados:rows.filter(x=>x.status==="submitted").length,pendentes:rows.filter(x=>x.status==="pending").length,
+ receita_centavos:rows.filter(x=>x.status==="paid"||x.status==="submitted").reduce((s,x)=>s+x.amount_cents,0)};
+ return respond({ok:true,summary,cases:cases.data||[],role:actor.role},200,origin);
+}
+async function adminUpdate(req:Request,p:any,origin:string){
+ const actor=await staff(req);
+ if(!actor||!["owner","admin","analyst"].includes(actor.role))return failure("Acesso não autorizado.",403,origin);
+ if(!isUuid(p?.case_id)||!CASE_STATUSES.includes(p?.status)||typeof p?.notes!=="string"||p.notes.length>3000)return failure("Dados de atualização inválidos.",400,origin);
+ const {data:before}=await db.from("goburn_cases").select("status").eq("id",p.case_id).maybeSingle();
+ if(!before)return failure("Caso não encontrado.",404,origin);
+ const change:any={status:p.status,internal_notes:p.notes.trim()};
+ if(p.status==="entregue")change.delivered_at=new Date().toISOString();
+ const {error}=await db.from("goburn_cases").update(change).eq("id",p.case_id);
+ if(error)return failure("Não foi possível atualizar o caso.",503,origin);
+ await db.from("goburn_audit").insert({actor:actor.id,case_id:p.case_id,action:"case.status_update",metadata:{old:before.status,new:p.status}});
+ return respond({ok:true},200,origin);
+}
+
 Deno.serve(async(req)=>{
   const url=new URL(req.url),origin=req.headers.get("origin")||"";
   if(req.method==="OPTIONS")return new Response(null,{status:204,headers:{"access-control-allow-origin":origin===ALLOWED?origin:ALLOWED,"access-control-allow-methods":"POST,OPTIONS","access-control-allow-headers":"content-type,apikey,authorization","vary":"Origin"}});
@@ -160,6 +197,6 @@ Deno.serve(async(req)=>{
   if(size>150000)return failure("Conteúdo muito grande.",413,origin);
   try{
     const p=await req.json();
-    switch(action){case"checkout":return await checkout(p,origin);case"status":return await status(p,origin);case"submit":return await submit(p,origin);default:return failure("Ação inválida.",404,origin);}
+    switch(action){case"checkout":return await checkout(p,origin);case"status":return await status(p,origin);case"submit":return await submit(p,origin);case"admin-dashboard":return await adminDashboard(req,origin);case"admin-update":return await adminUpdate(req,p,origin);default:return failure("Ação inválida.",404,origin);}
   }catch(error){console.error("GO BURN request error",error);return failure("Não foi possível processar sua solicitação.",503,origin);}
 });
