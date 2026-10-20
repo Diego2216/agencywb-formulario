@@ -26,6 +26,33 @@ for(const [key,value] of Object.entries(data)){if(typeof value==="boolean")conti
 const form=document.createElement("form");form.id="editCase";const label=safeText("label","Situação do diagnóstico");const select=document.createElement("select");select.name="status";for(const opt of statusOptions){const el=document.createElement("option");el.value=opt;el.textContent=opt.replaceAll("_"," ");el.selected=c.status===opt;select.append(el);}label.append(select);
 const notes=safeText("label","Notas internas");const ta=document.createElement("textarea");ta.name="notes";ta.maxLength=3000;ta.value=c.internal_notes||"";notes.append(ta);
 const btn=safeText("button","Salvar evolução →");btn.type="submit";btn.className="primary block";form.append(label,notes,btn);root.append(form);
+const draftBtn=safeText("button","Copiar rascunho interno do relatório ↗");
+draftBtn.type="button";draftBtn.className="secondary slim";draftBtn.style.marginTop="14px";
+draftBtn.onclick=async()=>{
+ const a=c.answers||{},plan=client.plan||"essencial";
+ const lines=[
+ "GO BURN | RASCUNHO INTERNO PARA REVISÃO HUMANA",
+ "Plano contratado: "+plan+" | Protocolo: "+c.protocol,
+ "Empresa: "+(client.customer_company||""), "Segmento: "+(a.sector||""),
+ "1. CONTEXTO E DESAFIO",a.problem||"Informação não fornecida.",
+ "2. PROCESSO ATUAL",a.current_process||"Pendente.",
+ "3. HIPÓTESE DE IMPACTO (VALIDAR)","Consequência relatada: "+(a.impact||"Pendente.")+
+ "; frequência: "+(a.frequency||"Pendente.")+"; horas manuais/semana: "+(a.manual_hours||"Pendente."),
+ "4. CANDIDATO A SOLUÇÃO (NÃO É DECISÃO TÉCNICA)","Categoria solicitada: "+c.opportunity_type+
+ "; ferramentas: "+(a.tools||"Não informadas")+"; integrações: "+(a.integrations||"Não informadas"),
+ "5. RESULTADO DESEJADO",a.outcome||"Pendente.",
+ "6. PREMISSAS COMERCIAIS","Orçamento declarado: "+(a.budget||"Não informado")+
+ "; prazo desejado: "+(a.timeline||"Não informado")+"; aprovação: "+(a.decision||"Não informada"),
+ "7. PONTOS A VALIDAR","Custo atual mensurável; integrações permitidas; volume de usuários; segurança/LGPD; capacidade de implantação; riscos e critérios de aceite.",
+ "8. PRÓXIMOS PASSOS","Analista revisa hipóteses, identifica quick wins, valida restrições e redige entregável conforme o plano pago."
+ ];
+ if(plan==="estrategico"||plan==="blueprint"){lines.push("9. ROADMAP PRELIMINAR (SEM COMPROMISSO)","Fase descoberta → validação de requisitos → protótipo → integração/testes → piloto.");}
+ if(plan==="blueprint"){lines.push("10. ARQUITETURA / MVP A DEFINIR","Mapear papéis e permissões, entidades, fluxos, integrações, requisitos não funcionais e prioridades MoSCoW. Não fixar stack sem discovery.");}
+ lines.push("DOCUMENTO EM ELABORAÇÃO — NÃO ENVIAR AO CLIENTE SEM REVISÃO E ACEITE DA EQUIPE.");
+ try{await navigator.clipboard.writeText(lines.join("\n\n"));msg("saveStatus","Rascunho copiado. Revisar antes de entregar.");}
+ catch{msg("saveStatus","Não foi possível copiar. Verifique a permissão da área de transferência.");}
+};
+root.append(draftBtn);
 form.onsubmit=async e=>{e.preventDefault();btn.disabled=true;try{await api("admin-update",{case_id:c.id,status:select.value,notes:ta.value});msg("saveStatus","Evolução salva com sucesso.");await load();}catch(err){msg("saveStatus",err.message);}finally{btn.disabled=false;}};}
 $("search").addEventListener("input",render);
 $("reload").addEventListener("click",()=>load().catch(e=>msg("saveStatus",e.message)));
