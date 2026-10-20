@@ -11,8 +11,8 @@ const PLANS: Record<string,{title:string,cents:number}> = {
 const env=(key:string)=>Deno.env.get(key)||"";
 const URL_BASE=env("SUPABASE_URL"), ROLE=env("SUPABASE_SERVICE_ROLE_KEY");
 const MP_TOKEN=env("MERCADOPAGO_ACCESS_TOKEN"), MP_SECRET=env("MERCADOPAGO_WEBHOOK_SECRET");
-const SITE=env("GOBURN_SITE_URL")||"https://diego2216.github.io/agencywb-formulario/goburn/";
-const ALLOWED=env("GOBURN_ALLOWED_ORIGIN")||"https://diego2216.github.io";
+const SITE=env("GOBURN_SITE_URL")||"https://radar.wodburn.com.br/goburn/";
+const ALLOWED=env("GOBURN_ALLOWED_ORIGIN")||"https://radar.wodburn.com.br";
 const API_URL=env("GOBURN_API_URL");
 const db=createClient(URL_BASE||"https://example.invalid",ROLE||"missing",{auth:{persistSession:false,autoRefreshToken:false}});
 const respond=(body:unknown,status=200,origin="")=>new Response(JSON.stringify(body),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store","access-control-allow-origin":origin===ALLOWED?origin:ALLOWED,"access-control-allow-headers":"content-type,apikey,authorization","access-control-allow-methods":"POST, OPTIONS","vary":"Origin"}});
